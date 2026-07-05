@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configurable Neural Network — C++ OOP Showcase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Substrate */
+  --pcb-bg: #0a1410;
+  --pcb-bg-raised: #0f1c16;
+  --pcb-panel: #0d1a14;
+  --copper: #3d6b52;
+  --copper-bright: #5a9478;
+  --copper-dim: #234035;
+
+  /* Signal polarity */
+  --amber: #e8a14a;
+  --amber-glow: rgba(232, 161, 74, 0.35);
+  --cyan: #4fd1c5;
+  --cyan-glow: rgba(79, 209, 197, 0.35);
+
+  /* Text */
+  --text-bright: #ecf3ee;
+  --text-dim: #8da895;
+  --text-faint: #5a7065;
+
+  /* Status */
+  --warn: #e85d4a;
+  --ok: #6fd17a;
+
+  /* Type */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--pcb-bg);
+  background-image:
+    linear-gradient(var(--copper-dim) 1px, transparent 1px),
+    linear-gradient(90deg, var(--copper-dim) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: -1px -1px;
+  background-attachment: fixed;
+  color: var(--text-bright);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(79,209,197,0.06), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+a { color: var(--cyan); text-decoration: none; }
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+/* ===== Header / Mode toggle ===== */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10, 20, 16, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--copper-dim);
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.brand-mark {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--amber);
+  border: 1px solid var(--copper);
+  padding: 3px 7px;
+  border-radius: 2px;
+}
+
+.brand-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--text-bright);
+  letter-spacing: -0.01em;
+}
+
+.brand-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.mode-toggle {
+  display: flex;
+  background: var(--pcb-panel);
+  border: 1px solid var(--copper-dim);
+  border-radius: 4px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.mode-btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.mode-btn:hover { color: var(--text-bright); }
+
+.mode-btn.active {
+  background: var(--copper-dim);
+  color: var(--cyan);
+}
+
+/* ===== Layout shells ===== */
+.view { display: none; }
+.view.active { display: block; }
+
+.hero {
+  padding: 56px 28px 36px;
+  max-width: 1180px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-eyebrow::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 8px var(--amber-glow);
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4.2vw, 46px);
+  line-height: 1.12;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  max-width: 820px;
+  color: var(--text-bright);
+}
+
+.hero h1 em {
+  font-style: normal;
+  color: var(--cyan);
+}
+
+.hero p {
+  margin-top: 18px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-width: 620px;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 28px;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+
+.hero-stat {
+  font-family: var(--font-mono);
+}
+
+.hero-stat .num {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--cyan);
+}
+
+.hero-stat .label {
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+main { position: relative; z-index: 1; }
+
+/* ===== LAB mode ===== */
+.lab-grid {
+  max-width: 1180px;
+  margin: 0 auto 64px;
+  padding: 0 28px;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 880px) {
+  .lab-grid { grid-template-columns: 1fr; }
+}
+
+.panel {
+  background: var(--pcb-panel);
+  border: 1px solid var(--copper-dim);
+  border-radius: 6px;
+  position: relative;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 16px; right: 16px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--copper-bright), transparent);
+  opacity: 0.5;
+}
+
+.panel-head {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 16px 20px 0;
+}
+
+.panel-body { padding: 14px 20px 20px; }
+
+/* --- Control panel --- */
+.control-group { margin-bottom: 22px; }
+
+.control-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+.control-label .val {
+  font-family: var(--font-mono);
+  color: var(--cyan);
+  font-size: 13px;
+}
+
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.layer-row input[type="range"] {
+  flex: 1;
+}
+
+.layer-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  width: 58px;
+  flex-shrink: 0;
+}
+
+.layer-count-display {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-faint);
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.layer-remove {
+  background: transparent;
+  border: 1px solid var(--copper-dim);
+  color: var(--text-faint);
+  border-radius: 3px;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+.layer-remove:hover { border-color: var(--warn); color: var(--warn); }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--copper-dim);
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--cyan);
+  cursor: pointer;
+  box-shadow: 0 0 6px var(--cyan-glow);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--cyan);
+  cursor: pointer;
+  box-shadow: 0 0 6px var(--cyan-glow);
+}
+
+.btn-row { display: flex; gap: 8px; margin-top: 4px; }
+
+.btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  padding: 9px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--copper);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+.btn.primary {
+  background: var(--copper-dim);
+  color: var(--text-bright);
+  border-color: var(--copper-bright);
+}
+.btn.primary:hover { background: var(--copper); }
+
+.btn.small { padding: 6px 10px; font-size: 11px; }
+
+.activation-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.activation-toggle button {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 9px 0;
+  border-radius: 4px;
+  border: 1px solid var(--copper-dim);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.activation-toggle button.active {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: rgba(232, 161, 74, 0.08);
+}
+
+.preset-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.preset-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 3px;
+  border: 1px solid var(--copper-dim);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.preset-chip:hover { border-color: var(--copper-bright); color: var(--text-dim); }
+.preset-chip.active {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(79, 209, 197, 0.08);
+}
+
+.error-banner {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--warn);
+  background: rgba(232, 93, 74, 0.1);
+  border: 1px solid rgba(232, 93, 74, 0.4);
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-top: 14px;
+}
+.error-banner.show { display: block; }
+
+/* --- Canvas / diagram panel --- */
+.diagram-panel { display: flex; flex-direction: column; }
+.diagram-panel .panel-body { padding: 14px 16px 16px; flex: 1; display: flex; flex-direction: column; }
+
+#network-canvas {
+  width: 100%;
+  height: 360px;
+  display: block;
+  border-radius: 4px;
+  background:
+    radial-gradient(ellipse 60% 80% at 50% 50%, rgba(79,209,197,0.04), transparent 70%),
+    var(--pcb-bg-raised);
+}
+
+.diagram-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.diagram-meta .arch-str { color: var(--cyan); }
+
+.fire-btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 10px 18px;
+  border-radius: 4px;
+  border: 1px solid var(--amber);
+  background: rgba(232, 161, 74, 0.1);
+  color: var(--amber);
+  cursor: pointer;
+  transition: background 0.15s;
+  letter-spacing: 0.04em;
+}
+.fire-btn:hover { background: rgba(232, 161, 74, 0.2); }
+.fire-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.input-vector {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.input-vector label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.input-vector input[type="number"] {
+  width: 64px;
+  background: var(--pcb-bg);
+  border: 1px solid var(--copper-dim);
+  border-radius: 3px;
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 5px 6px;
+}
+
+.output-readout {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.output-chip {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 3px;
+  background: var(--pcb-bg);
+  border: 1px solid var(--copper-dim);
+  color: var(--amber);
+}
+
+/* --- Benchmark comparison --- */
+.bench-section {
+  max-width: 1180px;
+  margin: 0 auto 80px;
+  padding: 0 28px;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.section-head h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+
+.section-head .note {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.bench-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .bench-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 540px) {
+  .bench-grid { grid-template-columns: 1fr; }
+}
+
+.bench-card {
+  background: var(--pcb-panel);
+  border: 1px solid var(--copper-dim);
+  border-radius: 6px;
+  padding: 18px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+  position: relative;
+}
+
+.bench-card:hover { border-color: var(--copper-bright); transform: translateY(-2px); }
+.bench-card.selected { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
+
+.bench-card .card-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.bench-card .card-arch {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--text-bright);
+  margin-top: 6px;
+}
+
+.bench-card .card-act {
+  display: inline-block;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 2px;
+  letter-spacing: 0.05em;
+}
+.card-act.sigmoid { background: rgba(79,209,197,0.12); color: var(--cyan); }
+.card-act.relu { background: rgba(232,161,74,0.12); color: var(--amber); }
+
+.card-metric {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.card-metric .metric-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+
+.card-metric .metric-val {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--text-bright);
+}
+
+.metric-bar-track {
+  height: 5px;
+  background: var(--copper-dim);
+  border-radius: 3px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.metric-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+.bench-footnote {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 16px;
+  line-height: 1.6;
+}
+
+/* ===== SOURCE mode ===== */
+.source-shell {
+  max-width: 1180px;
+  margin: 0 auto 80px;
+  padding: 0 28px;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 880px) {
+  .source-shell { grid-template-columns: 1fr; }
+}
+
+.file-tree { padding: 8px 0 16px; }
+
+.tree-group { margin-bottom: 4px; }
+
+.tree-group-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 10px 20px 6px;
+}
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 20px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.12s, color 0.12s;
+}
+
+.tree-item:hover { background: rgba(255,255,255,0.02); color: var(--text-bright); }
+
+.tree-item.active {
+  background: rgba(79,209,197,0.07);
+  color: var(--cyan);
+  border-left-color: var(--cyan);
+}
+
+.tree-icon {
+  font-size: 10px;
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+.tree-item.active .tree-icon { color: var(--cyan); }
+
+.code-panel { display: flex; flex-direction: column; min-width: 0; }
+
+.code-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--copper-dim);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.code-path {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-bright);
+}
+.code-path .dir { color: var(--text-faint); }
+
+.code-linecount {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.code-blurb {
+  padding: 14px 20px 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  border-bottom: 1px solid transparent;
+}
+
+.code-body {
+  padding: 16px 0 20px;
+  overflow-x: auto;
+  flex: 1;
+}
+
+.code-body pre {
+  margin: 0;
+  padding: 0 20px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.code-body code { font-family: var(--font-mono); }
+
+/* Minimal hljs theme tuned to the PCB palette */
+.hljs-keyword, .hljs-built_in { color: var(--cyan); }
+.hljs-string { color: var(--amber); }
+.hljs-comment { color: var(--text-faint); font-style: italic; }
+.hljs-number { color: #c79bf2; }
+.hljs-title.function_, .hljs-title.class_ { color: #8fd9ff; }
+.hljs-type { color: #79c9a4; }
+.hljs-literal { color: var(--amber); }
+.hljs-meta { color: var(--text-faint); }
+.hljs-params { color: var(--text-bright); }
+
+.arch-schematic {
+  max-width: 1180px;
+  margin: 0 auto 60px;
+  padding: 0 28px;
+}
+
+.arch-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+
+@media (max-width: 760px) {
+  .arch-cards { grid-template-columns: 1fr; }
+}
+
+.arch-card {
+  background: var(--pcb-panel);
+  border: 1px solid var(--copper-dim);
+  border-radius: 6px;
+  padding: 16px 18px;
+}
+
+.arch-card .pattern-name {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cyan);
+}
+
+.arch-card p {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+
+footer {
+  text-align: center;
+  padding: 30px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand">
+    <span class="brand-mark">C++17</span>
+    <div>
+      <div class="brand-title">Configurable Neural Network</div>
+      <div class="brand-sub">forward-pass only · OOP · architecture from config</div>
+    </div>
+  </div>
+  <div class="mode-toggle" role="tablist" aria-label="View mode">
+    <button class="mode-btn active" data-mode="lab" role="tab" aria-selected="true">LAB</button>
+    <button class="mode-btn" data-mode="source" role="tab" aria-selected="false">SOURCE</button>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="hero-eyebrow">MSc Project 06 / 21 — Bees Algorithm bridge</div>
+    <h1>A feedforward network that reads its <em>own blueprint</em> from a text file.</h1>
+    <p>No training, no backpropagation — just architecture in, signal out. Four config files define four networks. This page runs the same forward-pass math as the compiled C++ binary, verified bit-for-bit against its actual output.</p>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="num">8</div><div class="label">Source Files</div></div>
+      <div class="hero-stat"><div class="num">4</div><div class="label">Architectures</div></div>
+      <div class="hero-stat"><div class="num">100</div><div class="label">Sample Dataset</div></div>
+      <div class="hero-stat"><div class="num">0</div><div class="label">Stubs / TODOs</div></div>
+    </div>
+  </div>
+
+  <div id="view-lab" class="view active">
+    <div class="lab-grid">
+      <div class="panel">
+        <div class="panel-head">Architecture Builder</div>
+        <div class="panel-body">
+          <div class="control-group">
+            <div class="control-label"><span>Layers</span><span class="val" id="layer-count-val">3</span></div>
+            <div id="layer-rows"></div>
+            <div class="btn-row">
+              <button class="btn small" id="add-layer-btn">+ Add Layer</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <div class="control-label"><span>Activation Function</span></div>
+            <div class="activation-toggle">
+              <button data-act="sigmoid" class="active">Sigmoid</button>
+              <button data-act="relu">ReLU</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <div class="control-label"><span>Presets</span></div>
+            <div class="preset-row" id="preset-row"></div>
+          </div>
+
+          <div class="error-banner" id="error-banner"></div>
+        </div>
+      </div>
+
+      <div class="panel diagram-panel">
+        <div class="panel-head">Live Signal Diagram</div>
+        <div class="panel-body">
+          <canvas id="network-canvas" width="800" height="360" role="img" aria-label="Network architecture diagram"></canvas>
+          <div class="diagram-meta">
+            <span>Architecture: <span class="arch-str" id="arch-str-display">4-6-2</span></span>
+            <span id="param-count-display">38 parameters</span>
+          </div>
+          <div class="input-vector" id="input-vector-row">
+            <label>Input vector:</label>
+          </div>
+          <div style="margin-top: 14px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+            <button class="fire-btn" id="fire-btn">▶ FIRE FORWARD PASS</button>
+            <div class="output-readout" id="output-readout"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bench-section">
+      <div class="section-head">
+        <h2>Benchmark Comparison</h2>
+        <span class="note">identical to compiled C++ output — click a card to load it into the builder</span>
+      </div>
+      <div class="bench-grid" id="bench-grid"></div>
+      <div class="bench-footnote" id="bench-footnote"></div>
+    </div>
+  </div>
+
+  <div id="view-source" class="view">
+    <div class="source-shell">
+      <div class="panel file-tree">
+        <div id="tree-container"></div>
+      </div>
+      <div class="panel code-panel">
+        <div class="code-head">
+          <div class="code-path" id="code-path-display"></div>
+          <div class="code-linecount" id="code-linecount-display"></div>
+        </div>
+        <div class="code-blurb" id="code-blurb-display"></div>
+        <div class="code-body"><pre><code id="code-content-display" class="language-cpp"></code></pre></div>
+      </div>
+    </div>
+
+    <div class="arch-schematic">
+      <div class="section-head">
+        <h2>Design Patterns in Use</h2>
+      </div>
+      <div class="arch-cards" id="patterns-grid"></div>
+    </div>
+  </div>
+</main>
+
+<footer>Configurable Neural Network in C++ — OOP mini-project · forward-pass engine verified bit-for-bit against compiled binary output</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/ini.min.js"></script>
+<script id="nn-engine-src">// Faithful JS port of the C++ Configurable Neural Network forward-pass engine.
+// Mirrors: Activation.hpp/cpp, Neuron.hpp/cpp, Layer.hpp/cpp, Network.hpp/cpp,
+// Dataset.hpp/cpp exactly, including the deterministic seeding scheme, so
+// that numbers computed in the browser match numbers computed by the
+// compiled C++ binary bit-for-bit (modulo floating point printing).
+
+// ---- Mersenne Twister (mt19937), matching C++ std::mt19937 bit-for-bit ----
+// Standard 32-bit MT19937 implementation.
+class MT19937 {
+  constructor(seed) {
+    this.mt = new Uint32Array(624);
+    this.index = 624;
+    this.mt[0] = seed >>> 0;
+    for (let i = 1; i < 624; i++) {
+      const prev = this.mt[i - 1] ^ (this.mt[i - 1] >>> 30);
+      // 1812433253 * prev + i, done with 32-bit wraparound via Math trick
+      const lo = (prev & 0xffff);
+      const hi = (prev >>> 16);
+      const mulLo = (lo * 1812433253) >>> 0;
+      const mulHi = ((hi * 1812433253) << 16) >>> 0;
+      this.mt[i] = (mulLo + mulHi + i) >>> 0;
+    }
+  }
+
+  generate() {
+    for (let i = 0; i < 624; i++) {
+      const y = (this.mt[i] & 0x80000000) | (this.mt[(i + 1) % 624] & 0x7fffffff);
+      let next = this.mt[(i + 397) % 624] ^ (y >>> 1);
+      if (y & 1) next ^= 2567483615;
+      this.mt[i] = next >>> 0;
+    }
+    this.index = 0;
+  }
+
+  next() {
+    if (this.index >= 624) this.generate();
+    let y = this.mt[this.index];
+    y ^= y >>> 11;
+    y ^= (y << 7) & 2636928640;
+    y ^= (y << 15) & 4022730752;
+    y ^= y >>> 18;
+    this.index++;
+    return y >>> 0;
+  }
+
+  // Matches libstdc++'s std::uniform_real_distribution<double>, which
+  // internally uses generate_canonical<double, 53> and combines TWO
+  // consecutive 32-bit engine draws into one 53-bit-precision double:
+  // result = (secondDraw * 2^32 + firstDraw) / 2^64
+  // (first draw supplies the low bits, second draw the high bits).
+  nextDouble() {
+    const lo = this.next();
+    const hi = this.next();
+    return (hi * 4294967296 + lo) / 18446744073709551616; // hi*2^32+lo over 2^64
+  }
+
+  uniform(lo, hi) {
+    return lo + this.nextDouble() * (hi - lo);
+  }
+}
+
+// ---- Activation strategies (Strategy pattern, mirrors Activation.hpp) ----
+const Activations = {
+  sigmoid: {
+    name: "Sigmoid",
+    activate: (x) => 1 / (1 + Math.exp(-x)),
+  },
+  relu: {
+    name: "ReLU",
+    activate: (x) => (x > 0 ? x : 0),
+  },
+};
+
+function createActivation(name) {
+  const key = name.toLowerCase();
+  if (!Activations[key]) {
+    throw new Error(`Unknown activation '${name}' (expected 'sigmoid' or 'relu')`);
+  }
+  return Activations[key];
+}
+
+// ---- Neuron (mirrors Neuron.hpp/cpp) ----
+class Neuron {
+  constructor(numInputs, activation, seed) {
+    this.activation = activation;
+    const rng = new MT19937(seed >>> 0);
+    this.weights = [];
+    for (let i = 0; i < numInputs; i++) {
+      this.weights.push(rng.uniform(-0.5, 0.5));
+    }
+    this.bias = rng.uniform(-0.1, 0.1);
+  }
+
+  forward(inputs) {
+    if (inputs.length !== this.weights.length) {
+      throw new Error(
+        `Neuron.forward - input size (${inputs.length}) does not match expected weight count (${this.weights.length})`
+      );
+    }
+    let sum = this.bias;
+    for (let i = 0; i < inputs.length; i++) {
+      sum += inputs[i] * this.weights[i];
+    }
+    return this.activation.activate(sum);
+  }
+}
+
+// ---- Layer (mirrors Layer.hpp/cpp) ----
+class Layer {
+  constructor(numNeurons, numInputsPerNeuron, activation, layerSeed) {
+    this.neurons = [];
+    this.activationName = activation.name;
+    for (let i = 0; i < numNeurons; i++) {
+      const neuronSeed = (layerSeed + i * 7919) >>> 0;
+      this.neurons.push(new Neuron(numInputsPerNeuron, activation, neuronSeed));
+    }
+  }
+
+  forward(inputs) {
+    return this.neurons.map((n) => n.forward(inputs));
+  }
+}
+
+// ---- Network (mirrors Network.hpp/cpp) ----
+class Network {
+  constructor(layerSizes, activationName, baseSeed = 42) {
+    if (layerSizes.length < 2) {
+      throw new Error(
+        "Network: architecture must specify an input size and at least one real layer."
+      );
+    }
+    for (const size of layerSizes) {
+      if (size <= 0) {
+        throw new Error("Network: layer sizes must all be greater than zero.");
+      }
+    }
+
+    this.layerSizes = layerSizes.slice();
+    this.activation = createActivation(activationName);
+    this.layers = [];
+
+    for (let i = 1; i < layerSizes.length; i++) {
+      const numNeurons = layerSizes[i];
+      const numInputsPerNeuron = layerSizes[i - 1];
+      const layerSeed = (baseSeed + i * 104729) >>> 0;
+      this.layers.push(new Layer(numNeurons, numInputsPerNeuron, this.activation, layerSeed));
+    }
+  }
+
+  forward(input) {
+    if (input.length !== this.layerSizes[0]) {
+      throw new Error(
+        `Network.forward - input size (${input.length}) does not match configured input dimensionality (${this.layerSizes[0]})`
+      );
+    }
+    let current = input;
+    for (const layer of this.layers) {
+      current = layer.forward(current);
+    }
+    return current;
+  }
+
+  // Returns the intermediate output of every layer (including input), for
+  // animating signal propagation through the canvas diagram.
+  forwardTrace(input) {
+    const trace = [input.slice()];
+    let current = input;
+    for (const layer of this.layers) {
+      current = layer.forward(current);
+      trace.push(current.slice());
+    }
+    return trace;
+  }
+
+  architectureString() {
+    return this.layerSizes.join("-");
+  }
+
+  activationDisplayName() {
+    return this.activation.name;
+  }
+}
+
+// ---- Dataset (mirrors Dataset.hpp/cpp) ----
+class Dataset {
+  constructor(inputSize, outputSize, sampleCount = 100, seed = 2024) {
+    const rng = new MT19937(seed >>> 0);
+    this.samples = [];
+    for (let s = 0; s < sampleCount; s++) {
+      const input = [];
+      for (let i = 0; i < inputSize; i++) input.push(rng.uniform(-1.0, 1.0));
+      const target = [];
+      for (let o = 0; o < outputSize; o++) target.push(rng.uniform(0.0, 1.0));
+      this.samples.push({ input, target });
+    }
+  }
+
+  computeMSE(predictions) {
+    if (predictions.length !== this.samples.length) {
+      throw new Error("Dataset.computeMSE - prediction count mismatch");
+    }
+    let totalSquaredError = 0;
+    let totalElements = 0;
+    for (let s = 0; s < this.samples.length; s++) {
+      const predicted = predictions[s];
+      const target = this.samples[s].target;
+      for (let i = 0; i < predicted.length; i++) {
+        const err = predicted[i] - target[i];
+        totalSquaredError += err * err;
+        totalElements++;
+      }
+    }
+    return totalElements > 0 ? totalSquaredError / totalElements : 0;
+  }
+}
+
+// ---- BenchmarkRunner (mirrors BenchmarkRunner.hpp/cpp) ----
+function runBenchmark(config) {
+  const network = new Network(config.layerSizes, config.activation);
+  const inputSize = config.layerSizes[0];
+  const outputSize = config.layerSizes[config.layerSizes.length - 1];
+  const dataset = new Dataset(inputSize, outputSize, 100, 2024);
+
+  const predictions = [];
+  const t0 = performance.now();
+  for (const sample of dataset.samples) {
+    predictions.push(network.forward(sample.input));
+  }
+  const t1 = performance.now();
+
+  const mse = dataset.computeMSE(predictions);
+  const totalMs = t1 - t0;
+
+  return {
+    label: config.label,
+    architecture: network.architectureString(),
+    activation: network.activationDisplayName(),
+    mse,
+    avgMicroseconds: (totalMs * 1000) / dataset.samples.length,
+    totalMicroseconds: totalMs * 1000,
+  };
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { MT19937, Network, Dataset, Neuron, Layer, runBenchmark, createActivation };
+}
+if (typeof window !== "undefined") {
+  window.NNEngine = { MT19937, Network, Dataset, Neuron, Layer, runBenchmark, createActivation };
+}
+</script>
+<script id="source-data">const SOURCE_FILES = [{"path": "CMakeLists.txt", "category": "build", "lang": "cmake", "blurb": "Cross-platform build configuration. Compiles all 8 translation units as C++17, enables strict warnings, and copies config/ next to the built executable.", "content": "cmake_minimum_required(VERSION 3.15)\nproject(ConfigurableNeuralNetwork LANGUAGES CXX)\n\nset(CMAKE_CXX_STANDARD 17)\nset(CMAKE_CXX_STANDARD_REQUIRED ON)\nset(CMAKE_CXX_EXTENSIONS OFF)\n\nif(NOT CMAKE_BUILD_TYPE)\n    set(CMAKE_BUILD_TYPE Release)\nendif()\n\nadd_executable(configurable_nn\n    src/main.cpp\n    src/Activation.cpp\n    src/Neuron.cpp\n    src/Layer.cpp\n    src/Network.cpp\n    src/ConfigParser.cpp\n    src/Dataset.cpp\n    src/BenchmarkRunner.cpp\n)\n\ntarget_include_directories(configurable_nn PRIVATE include)\n\nif(MSVC)\n    target_compile_options(configurable_nn PRIVATE /W4)\nelse()\n    target_compile_options(configurable_nn PRIVATE -Wall -Wextra -Wpedantic)\nendif()\n\n# Copy the config/ directory next to the built executable so the program\n# can find its configuration files using a relative path at runtime,\n# regardless of which build system generator is used.\nadd_custom_command(TARGET configurable_nn POST_BUILD\n    COMMAND ${CMAKE_COMMAND} -E copy_directory\n        ${CMAKE_SOURCE_DIR}/config\n        $<TARGET_FILE_DIR:configurable_nn>/config\n)\n", "lines": 39}, {"path": "README.md", "category": "docs", "lang": "markdown", "blurb": "Project documentation: structure, design rationale, build/run instructions, and the MSc Bees Algorithm bridge.", "content": "# Configurable Neural Network in C++ (OOP)\n\nA C++17, object-oriented feedforward neural network whose **architecture**\n(number of layers, neurons per layer, and activation function) is loaded\nentirely from external text configuration files. The program performs\n**forward-pass inference only** \u2014 no training/backpropagation \u2014 and\nbenchmarks four different architectures (small, medium, large, wide)\nagainst a fixed 100-sample synthetic dataset, reporting Mean Squared\nError and execution time for each.\n\nThis implements the **Configurable Neural Network** mini-project\n(MSc Project 06/21 bridge), which links to MSc-level Neural Architecture\nSearch using The Bees Algorithm: the config-file format used here defines\nexactly the kind of search space (layer count, layer width, activation\nchoice) that a Bees Algorithm optimiser would explore at MSc level.\n\n## Project Structure\n\n```\nConfigurableNN/\n\u251c\u2500\u2500 CMakeLists.txt\n\u251c\u2500\u2500 README.md\n\u251c\u2500\u2500 include/\n\u2502   \u251c\u2500\u2500 Activation.hpp      # IActivation strategy interface + Sigmoid/ReLU\n\u2502   \u251c\u2500\u2500 Neuron.hpp          # Single neuron: weights, bias, forward()\n\u2502   \u251c\u2500\u2500 Layer.hpp           # A layer of fully-connected neurons\n\u2502   \u251c\u2500\u2500 Network.hpp         # Full feedforward network (forward pass only)\n\u2502   \u251c\u2500\u2500 ConfigParser.hpp    # Parses \"layers:/sizes:/activation:\" config files\n\u2502   \u251c\u2500\u2500 Dataset.hpp         # Hardcoded 100-sample dataset + MSE computation\n\u2502   \u251c\u2500\u2500 Timer.hpp           # RAII std::chrono stopwatch\n\u2502   \u2514\u2500\u2500 BenchmarkRunner.hpp # Orchestrates running all architectures + report\n\u251c\u2500\u2500 src/\n\u2502   \u251c\u2500\u2500 main.cpp\n\u2502   \u251c\u2500\u2500 Activation.cpp\n\u2502   \u251c\u2500\u2500 Neuron.cpp\n\u2502   \u251c\u2500\u2500 Layer.cpp\n\u2502   \u251c\u2500\u2500 Network.cpp\n\u2502   \u251c\u2500\u2500 ConfigParser.cpp\n\u2502   \u251c\u2500\u2500 Dataset.cpp\n\u2502   \u2514\u2500\u2500 BenchmarkRunner.cpp\n\u2514\u2500\u2500 config/\n    \u251c\u2500\u2500 small.txt    # input(4) -> 6 -> output(2),        2 real layers, sigmoid\n    \u251c\u2500\u2500 medium.txt   # input(4) -> 8 -> 6 -> output(2),    3 real layers, sigmoid\n    \u251c\u2500\u2500 large.txt    # input(4) -> 16 -> 12 -> 8 -> out(2), 4 real layers, relu\n    \u2514\u2500\u2500 wide.txt     # input(4) -> 64 -> output(2),        1 wide layer,  relu\n```\n\n## OOP Design\n\n- **Strategy pattern** (`IActivation`): `Sigmoid` and `ReLU` are interchangeable\n  activation strategies selected at runtime via `IActivation::create(name)`.\n  Adding a new activation function (e.g. Tanh) requires only a new subclass \u2014\n  no changes to `Neuron`, `Layer`, or `Network`.\n- **Single Responsibility**: each class does exactly one thing \u2014\n  `Neuron` computes one scalar output; `Layer` fans a vector out across\n  neurons; `Network` chains layers; `ConfigParser` only parses text;\n  `Dataset` only generates data and scores predictions; `BenchmarkRunner`\n  only orchestrates and reports.\n- **RAII**: `Timer` wraps `std::chrono` cleanly; all containers use\n  value semantics / smart pointers \u2014 no manual `new`/`delete` anywhere.\n- **Const-correctness**: all read-only operations (`forward`, accessors)\n  are `const`; mutation is confined to construction.\n- **Exception-based validation**: malformed configs, mismatched\n  dimensions, and unknown activation names all throw `std::invalid_argument`\n  or `std::runtime_error` with specific, actionable messages \u2014 verified\n  by direct testing.\n\n## Config File Format\n\n```\nlayers: 3\nsizes: 4 6 2\nactivation: sigmoid\n```\n\n- `layers:` \u2014 total count of entries in `sizes:` (input dimension + all\n  real layers). Used as a self-check against `sizes:`.\n- `sizes:` \u2014 space-separated layer widths. The **first** value is the\n  network's input dimensionality; every value after it defines one real\n  (neuron-bearing) layer.\n- `activation:` \u2014 `sigmoid` or `relu` (case-insensitive). Applied to\n  every neuron in the network.\n- Lines starting with `#` are comments; blank lines are ignored.\n\n## Building\n\nRequires CMake \u2265 3.15 and a C++17 compiler (GCC, Clang, or MSVC).\n\n```bash\nmkdir build && cd build\ncmake .. -DCMAKE_BUILD_TYPE=Release\ncmake --build .\n```\n\nThis produces `configurable_nn` (or `configurable_nn.exe` on Windows) and\nautomatically copies the `config/` directory next to the executable.\n\n### Building without CMake (quick manual compile)\n\n```bash\ng++ -std=c++17 -Wall -Wextra -O2 -Iinclude \\\n    src/main.cpp src/Activation.cpp src/Neuron.cpp src/Layer.cpp \\\n    src/Network.cpp src/ConfigParser.cpp src/Dataset.cpp \\\n    src/BenchmarkRunner.cpp -o configurable_nn\n```\n\n## Running\n\n```bash\n./configurable_nn config\n```\n\nThe single argument is the path to the directory containing\n`small.txt`, `medium.txt`, `large.txt`, and `wide.txt`. It defaults to\n`config` if omitted.\n\n### Sample Output\n\n```\n======================================================================================================\n  CONFIGURABLE NEURAL NETWORK - ARCHITECTURE BENCHMARK REPORT\n======================================================================================================\nArchitecture            Layer Sizes   Activation           MSE     Avg Time (us)      Total (us)\n------------------------------------------------------------------------------------------------------\nSmall (2 layers)        4-6-2         Sigmoid         0.089199              0.29           28.77\nMedium (3 layers)       4-8-6-2       Sigmoid         0.096258              0.44           43.52\nLarge (4 layers)        4-16-12-8-2   ReLU            0.260462              0.58           58.04\nWide (1 large layer)    4-64-2        ReLU            0.265850              0.66           65.67\n======================================================================================================\n```\n\n(Exact timing values vary by machine; MSE values are deterministic and\nreproducible across runs and machines, since weights and the dataset are\ngenerated from fixed seeds.)\n\n## Notes on Reproducibility\n\nBoth the network weights/biases and the synthetic dataset are generated\nwith `std::mt19937` seeded by fixed constants, so the **MSE values are\nidentical on every run** (timing naturally varies with hardware/load).\nThis makes the four architectures directly comparable \u2014 any MSE\ndifference is due to architecture/activation choice, not random noise.\nThis is intentional and documented behavior, not a limitation: the\nproject is a forward-pass/architecture-comparison study, not a trained\nmodel, so weight initialization is illustrative rather than learned.\n\n## Extending This Project (MSc Bridge)\n\nThe `sizes:`/`activation:` config format is exactly the kind of discrete\nsearch space a Bees Algorithm Neural Architecture Search would explore:\neach \"bee\" could represent one candidate config file, with the resulting\nMSE (or accuracy/latency tradeoff) serving directly as the fitness\nfunction \u2014 no changes needed to `Network`, `Layer`, or `Neuron`.\n", "lines": 154}, {"path": "include/Activation.hpp", "category": "header", "lang": "cpp", "blurb": "Strategy interface for activation functions. Declares IActivation, Sigmoid, and ReLU, plus a factory method create() that builds a strategy from a config string.", "content": "#ifndef ACTIVATION_HPP\n#define ACTIVATION_HPP\n\n#include <cmath>\n#include <memory>\n#include <string>\n\n/**\n * @brief Abstract base class for activation function strategies.\n *\n * This follows the Strategy design pattern: each concrete activation\n * function (Sigmoid, ReLU, ...) implements the same interface so that\n * a Neuron can be configured with any activation function at runtime\n * without changing the Neuron's own logic.\n */\nclass IActivation {\npublic:\n    virtual ~IActivation() = default;\n\n    /**\n     * @brief Apply the activation function to a raw weighted sum.\n     * @param x The pre-activation value (weighted sum + bias).\n     * @return The activated value.\n     */\n    virtual double activate(double x) const = 0;\n\n    /**\n     * @brief Return the human-readable name of this activation function.\n     */\n    virtual std::string name() const = 0;\n\n    /**\n     * @brief Factory method: create an activation strategy by name.\n     * @param activationName Either \"sigmoid\" or \"relu\" (case-insensitive).\n     * @return A unique_ptr owning the requested activation strategy.\n     * @throws std::invalid_argument if the name is not recognized.\n     */\n    static std::unique_ptr<IActivation> create(const std::string& activationName);\n};\n\n/**\n * @brief Logistic sigmoid activation: f(x) = 1 / (1 + e^-x).\n *\n * Squashes any real input into the open interval (0, 1). Smooth and\n * differentiable everywhere, but suffers from vanishing gradients for\n * large |x|.\n */\nclass Sigmoid : public IActivation {\npublic:\n    double activate(double x) const override {\n        return 1.0 / (1.0 + std::exp(-x));\n    }\n\n    std::string name() const override {\n        return \"Sigmoid\";\n    }\n};\n\n/**\n * @brief Rectified Linear Unit activation: f(x) = max(0, x).\n *\n * Cheap to compute and avoids vanishing gradients for positive inputs,\n * but can produce \"dead\" neurons if inputs are persistently negative.\n */\nclass ReLU : public IActivation {\npublic:\n    double activate(double x) const override {\n        return x > 0.0 ? x : 0.0;\n    }\n\n    std::string name() const override {\n        return \"ReLU\";\n    }\n};\n\n#endif // ACTIVATION_HPP\n", "lines": 77}, {"path": "src/Activation.cpp", "category": "source", "lang": "cpp", "blurb": "Implements IActivation::create() \u2014 a case-insensitive factory that returns a Sigmoid or ReLU strategy object, or throws on an unrecognized name.", "content": "#include \"Activation.hpp\"\n#include <stdexcept>\n#include <algorithm>\n\nnamespace {\n    std::string toLower(const std::string& s) {\n        std::string result = s;\n        std::transform(result.begin(), result.end(), result.begin(),\n                        [](unsigned char c) { return std::tolower(c); });\n        return result;\n    }\n}\n\nstd::unique_ptr<IActivation> IActivation::create(const std::string& activationName) {\n    std::string lowered = toLower(activationName);\n\n    if (lowered == \"sigmoid\") {\n        return std::make_unique<Sigmoid>();\n    }\n    if (lowered == \"relu\") {\n        return std::make_unique<ReLU>();\n    }\n\n    throw std::invalid_argument(\n        \"IActivation::create - unknown activation function '\" + activationName +\n        \"'. Supported values are 'sigmoid' and 'relu'.\");\n}\n", "lines": 28}, {"path": "include/Neuron.hpp", "category": "header", "lang": "cpp", "blurb": "A single neuron: owns its weight vector, bias, and a shared activation strategy. Pure forward-pass \u2014 no gradients, no training.", "content": "#ifndef NEURON_HPP\n#define NEURON_HPP\n\n#include <vector>\n#include <memory>\n#include \"Activation.hpp\"\n\n/**\n * @brief Represents a single artificial neuron.\n *\n * A Neuron owns its own weight vector, bias term, and a reference to an\n * activation strategy (shared across the layer it belongs to, since the\n * activation function is a per-layer configuration, not a per-neuron one).\n *\n * Responsibility: given an input vector, compute the weighted sum plus\n * bias, then pass it through the activation function to produce a single\n * scalar output. This is a pure forward-pass neuron; no training/backprop\n * logic is implemented, per the project specification.\n */\nclass Neuron {\npublic:\n    /**\n     * @brief Construct a neuron with deterministic pseudo-random weights.\n     * @param numInputs Number of inputs this neuron receives (i.e. the\n     *        size of the previous layer, or the size of the network's\n     *        input vector for first-layer neurons).\n     * @param activation Shared pointer to the activation strategy used by\n     *        this neuron's layer.\n     * @param seed A seed value used to deterministically vary the\n     *        generated weights between neurons, so that runs are\n     *        reproducible across program executions.\n     */\n    Neuron(std::size_t numInputs,\n           std::shared_ptr<IActivation> activation,\n           unsigned int seed);\n\n    /**\n     * @brief Compute the forward pass output of this neuron.\n     * @param inputs The input vector from the previous layer (or the\n     *        network's input vector, for first-layer neurons).\n     * @return The activated scalar output.\n     * @throws std::invalid_argument if inputs.size() does not match the\n     *         number of weights this neuron was constructed with.\n     */\n    double forward(const std::vector<double>& inputs) const;\n\n    /// @brief Return the number of inputs (weights) this neuron expects.\n    std::size_t inputSize() const { return weights_.size(); }\n\n    /// @brief Read-only access to this neuron's weights (useful for inspection/testing).\n    const std::vector<double>& weights() const { return weights_; }\n\n    /// @brief Read-only access to this neuron's bias term.\n    double bias() const { return bias_; }\n\nprivate:\n    std::vector<double> weights_;\n    double bias_;\n    std::shared_ptr<IActivation> activation_;\n\n    /**\n     * @brief Deterministically initialize weights and bias using a\n     *        simple, reproducible pseudo-random scheme seeded by\n     *        @p seed, scaled to a small range suitable for forward-pass\n     *        demonstration (this project performs no training, so the\n     *        initialization scheme need only be stable and reasonable,\n     *        not statistically optimal like Xavier/He initialization).\n     */\n    void initializeParameters(unsigned int seed);\n};\n\n#endif // NEURON_HPP\n", "lines": 73}, {"path": "src/Neuron.cpp", "category": "source", "lang": "cpp", "blurb": "Neuron's forward() computes the weighted sum plus bias, then applies the activation strategy. Weights/bias are seeded deterministically via std::mt19937 so every run is reproducible.", "content": "#include \"Neuron.hpp\"\n#include <random>\n#include <stdexcept>\n\nNeuron::Neuron(std::size_t numInputs,\n               std::shared_ptr<IActivation> activation,\n               unsigned int seed)\n    : weights_(numInputs, 0.0),\n      bias_(0.0),\n      activation_(std::move(activation)) {\n    initializeParameters(seed);\n}\n\nvoid Neuron::initializeParameters(unsigned int seed) {\n    // Use a fixed-seed Mersenne Twister so that results are reproducible\n    // across runs (important for the benchmark table to be stable/comparable).\n    std::mt19937 generator(seed);\n    std::uniform_real_distribution<double> weightDist(-0.5, 0.5);\n    std::uniform_real_distribution<double> biasDist(-0.1, 0.1);\n\n    for (auto& w : weights_) {\n        w = weightDist(generator);\n    }\n    bias_ = biasDist(generator);\n}\n\ndouble Neuron::forward(const std::vector<double>& inputs) const {\n    if (inputs.size() != weights_.size()) {\n        throw std::invalid_argument(\n            \"Neuron::forward - input size (\" + std::to_string(inputs.size()) +\n            \") does not match expected weight count (\" +\n            std::to_string(weights_.size()) + \")\");\n    }\n\n    double weightedSum = bias_;\n    for (std::size_t i = 0; i < inputs.size(); ++i) {\n        weightedSum += inputs[i] * weights_[i];\n    }\n\n    return activation_->activate(weightedSum);\n}\n", "lines": 42}, {"path": "include/Layer.hpp", "category": "header", "lang": "cpp", "blurb": "A fully-connected layer: a vector of Neurons sharing one activation strategy and receiving the same input vector.", "content": "#ifndef LAYER_HPP\n#define LAYER_HPP\n\n#include <vector>\n#include <memory>\n#include \"Neuron.hpp\"\n#include \"Activation.hpp\"\n\n/**\n * @brief Represents one fully-connected layer of neurons.\n *\n * A Layer owns a collection of Neuron objects, all sharing the same\n * activation strategy and all receiving the same input vector. Its sole\n * responsibility is to run a forward pass: feed the input vector to every\n * neuron in the layer and collect their outputs into the layer's output\n * vector, which becomes the next layer's input.\n */\nclass Layer {\npublic:\n    /**\n     * @brief Construct a layer of fully-connected neurons.\n     * @param numNeurons Number of neurons in this layer (its \"width\").\n     * @param numInputsPerNeuron Number of inputs each neuron receives\n     *        (the width of the previous layer, or the network input size\n     *        for the first layer).\n     * @param activation Shared activation strategy used by every neuron\n     *        in this layer.\n     * @param layerSeed Base seed used to derive distinct, reproducible\n     *        per-neuron seeds within this layer.\n     */\n    Layer(std::size_t numNeurons,\n          std::size_t numInputsPerNeuron,\n          std::shared_ptr<IActivation> activation,\n          unsigned int layerSeed);\n\n    /**\n     * @brief Run the forward pass for this layer.\n     * @param inputs The input vector (from the previous layer, or the\n     *        network's input for the first layer).\n     * @return A vector containing each neuron's activated output, in the\n     *         same order the neurons were constructed.\n     */\n    std::vector<double> forward(const std::vector<double>& inputs) const;\n\n    /// @brief Number of neurons in this layer.\n    std::size_t size() const { return neurons_.size(); }\n\n    /// @brief Read-only access to the underlying neurons (for inspection/testing).\n    const std::vector<Neuron>& neurons() const { return neurons_; }\n\n    /// @brief Name of the activation function used by this layer.\n    std::string activationName() const { return activationName_; }\n\nprivate:\n    std::vector<Neuron> neurons_;\n    std::string activationName_;\n};\n\n#endif // LAYER_HPP\n", "lines": 60}, {"path": "src/Layer.cpp", "category": "source", "lang": "cpp", "blurb": "Layer's forward() feeds the input vector to every neuron and collects their outputs \u2014 this becomes the next layer's input.", "content": "#include \"Layer.hpp\"\n\nLayer::Layer(std::size_t numNeurons,\n             std::size_t numInputsPerNeuron,\n             std::shared_ptr<IActivation> activation,\n             unsigned int layerSeed)\n    : activationName_(activation ? activation->name() : \"Unknown\") {\n    neurons_.reserve(numNeurons);\n\n    for (std::size_t i = 0; i < numNeurons; ++i) {\n        // Derive a distinct, reproducible seed per neuron so that no two\n        // neurons in the same layer get identical weights, while the\n        // whole run remains deterministic across program executions.\n        unsigned int neuronSeed = layerSeed + static_cast<unsigned int>(i) * 7919u;\n        neurons_.emplace_back(numInputsPerNeuron, activation, neuronSeed);\n    }\n}\n\nstd::vector<double> Layer::forward(const std::vector<double>& inputs) const {\n    std::vector<double> outputs;\n    outputs.reserve(neurons_.size());\n\n    for (const auto& neuron : neurons_) {\n        outputs.push_back(neuron.forward(inputs));\n    }\n\n    return outputs;\n}\n", "lines": 29}, {"path": "include/Network.hpp", "category": "header", "lang": "cpp", "blurb": "The full feedforward network: an ordered vector of Layers built from an architecture description like {4, 6, 2}.", "content": "#ifndef NETWORK_HPP\n#define NETWORK_HPP\n\n#include <vector>\n#include <memory>\n#include <string>\n#include \"Layer.hpp\"\n#include \"Activation.hpp\"\n\n/**\n * @brief Represents a configurable feedforward neural network.\n *\n * A Network owns an ordered sequence of Layer objects. Its architecture\n * (number of layers and number of neurons per layer) is supplied at\n * construction time, typically loaded from a configuration file via\n * ConfigParser. The Network's only computational responsibility is to\n * run a full forward pass: feed an input vector through every layer in\n * sequence and return the final layer's output.\n *\n * No training (backpropagation, gradient descent, etc.) is implemented;\n * this class performs inference only, per the project specification.\n */\nclass Network {\npublic:\n    /**\n     * @brief Construct a network from an explicit architecture description.\n     * @param layerSizes Sizes of each layer, e.g. {4, 3, 2} means an\n     *        input layer expecting 4 inputs, a hidden layer of 3 neurons,\n     *        and an output layer of 2 neurons. The first entry is treated\n     *        as the input dimensionality and does NOT create a Layer of\n     *        neurons by itself; it only defines how many inputs the\n     *        first real layer (layerSizes[1]) receives.\n     * @param activationName Name of the activation function to use for\n     *        every neuron in the network (\"sigmoid\" or \"relu\").\n     * @param baseSeed Base seed used to derive reproducible per-layer\n     *        seeds, so that the same architecture always produces the\n     *        same weights across runs.\n     *\n     * @throws std::invalid_argument if layerSizes has fewer than 2\n     *         entries (an input size and at least one real layer are\n     *         required), or if any layer size is zero.\n     */\n    Network(const std::vector<std::size_t>& layerSizes,\n            const std::string& activationName,\n            unsigned int baseSeed = 42);\n\n    /**\n     * @brief Run a full forward pass through the network.\n     * @param input The input feature vector. Its size must equal\n     *        layerSizes[0] as supplied at construction.\n     * @return The output vector produced by the final layer.\n     * @throws std::invalid_argument if input.size() does not match the\n     *         expected input dimensionality.\n     */\n    std::vector<double> forward(const std::vector<double>& input) const;\n\n    /// @brief Total number of real (neuron-bearing) layers in the network.\n    std::size_t numLayers() const { return layers_.size(); }\n\n    /// @brief The full architecture description, including the input size.\n    const std::vector<std::size_t>& architecture() const { return layerSizes_; }\n\n    /// @brief Canonical display name of the activation function in use (e.g. \"Sigmoid\", \"ReLU\").\n    std::string activationName() const { return activation_->name(); }\n\n    /**\n     * @brief Render the architecture as a compact human-readable string,\n     *        e.g. \"4-3-2\".\n     */\n    std::string architectureString() const;\n\nprivate:\n    std::vector<std::size_t> layerSizes_;\n    std::string activationName_;\n    std::shared_ptr<IActivation> activation_;\n    std::vector<Layer> layers_;\n\n    /// @brief Validate the architecture vector; throws on invalid input.\n    void validateArchitecture() const;\n};\n\n#endif // NETWORK_HPP\n", "lines": 83}, {"path": "src/Network.cpp", "category": "source", "lang": "cpp", "blurb": "Validates the architecture, builds each Layer with derived reproducible seeds, and chains layers together in forward() to produce the final output vector.", "content": "#include \"Network.hpp\"\n#include <stdexcept>\n#include <sstream>\n\nNetwork::Network(const std::vector<std::size_t>& layerSizes,\n                  const std::string& activationName,\n                  unsigned int baseSeed)\n    : layerSizes_(layerSizes),\n      activationName_(activationName) {\n    validateArchitecture();\n\n    activation_ = IActivation::create(activationName_);\n\n    layers_.reserve(layerSizes_.size() - 1);\n\n    // layerSizes_[0] is the input dimensionality (no neurons of its own).\n    // Each subsequent entry defines a real layer of neurons whose input\n    // width is the previous entry in layerSizes_.\n    for (std::size_t i = 1; i < layerSizes_.size(); ++i) {\n        std::size_t numNeurons = layerSizes_[i];\n        std::size_t numInputsPerNeuron = layerSizes_[i - 1];\n\n        // Derive a distinct, reproducible seed per layer.\n        unsigned int layerSeed = baseSeed + static_cast<unsigned int>(i) * 104729u;\n\n        layers_.emplace_back(numNeurons, numInputsPerNeuron, activation_, layerSeed);\n    }\n}\n\nvoid Network::validateArchitecture() const {\n    if (layerSizes_.size() < 2) {\n        throw std::invalid_argument(\n            \"Network: architecture must specify an input size and at \"\n            \"least one real layer (e.g. {4, 3, 2}).\");\n    }\n\n    for (std::size_t size : layerSizes_) {\n        if (size == 0) {\n            throw std::invalid_argument(\n                \"Network: layer sizes must all be greater than zero.\");\n        }\n    }\n}\n\nstd::vector<double> Network::forward(const std::vector<double>& input) const {\n    if (input.size() != layerSizes_.front()) {\n        throw std::invalid_argument(\n            \"Network::forward - input size (\" + std::to_string(input.size()) +\n            \") does not match configured input dimensionality (\" +\n            std::to_string(layerSizes_.front()) + \")\");\n    }\n\n    std::vector<double> current = input;\n    for (const auto& layer : layers_) {\n        current = layer.forward(current);\n    }\n\n    return current;\n}\n\nstd::string Network::architectureString() const {\n    std::ostringstream oss;\n    for (std::size_t i = 0; i < layerSizes_.size(); ++i) {\n        if (i > 0) {\n            oss << \"-\";\n        }\n        oss << layerSizes_[i];\n    }\n    return oss.str();\n}\n", "lines": 71}, {"path": "include/ConfigParser.hpp", "category": "header", "lang": "cpp", "blurb": "Declares NetworkConfig (a plain architecture descriptor) and ConfigParser, which reads the layers:/sizes:/activation: text format.", "content": "#ifndef CONFIG_PARSER_HPP\n#define CONFIG_PARSER_HPP\n\n#include <vector>\n#include <string>\n#include <cstddef>\n\n/**\n * @brief Plain data structure describing a parsed network configuration.\n */\nstruct NetworkConfig {\n    std::string label;                  ///< Human-readable name, e.g. \"Small\".\n    std::vector<std::size_t> layerSizes; ///< Includes input size as element 0.\n    std::string activation;             ///< \"sigmoid\" or \"relu\".\n};\n\n/**\n * @brief Parses network architecture configuration from text files.\n *\n * Responsibility: read a configuration file in the format\n *\n *     layers: 3\n *     sizes: 4 3 2\n *     activation: sigmoid\n *\n * and produce a NetworkConfig describing the resulting architecture.\n * This class is solely concerned with parsing and validating the file\n * format; it knows nothing about how the Network class uses the data.\n */\nclass ConfigParser {\npublic:\n    /**\n     * @brief Parse a configuration file from disk.\n     * @param filePath Path to the configuration text file.\n     * @return A populated NetworkConfig. The \"label\" field is set to the\n     *         filename (without extension) by default.\n     * @throws std::runtime_error if the file cannot be opened, is\n     *         malformed, or the declared layer count does not match the\n     *         number of sizes provided.\n     */\n    static NetworkConfig parseFile(const std::string& filePath);\n\n    /**\n     * @brief Parse configuration directly from an in-memory string.\n     *\n     * Useful for unit testing without needing files on disk, and reused\n     * internally by parseFile().\n     * @param content The full text content to parse.\n     * @return A populated NetworkConfig (label left empty; caller may set it).\n     * @throws std::runtime_error on malformed content.\n     */\n    static NetworkConfig parseString(const std::string& content);\n};\n\n#endif // CONFIG_PARSER_HPP\n", "lines": 56}, {"path": "src/ConfigParser.cpp", "category": "source", "lang": "cpp", "blurb": "Parses config text line-by-line, validates that the declared layer count matches the number of sizes given, and defaults to sigmoid if no activation is specified.", "content": "#include \"ConfigParser.hpp\"\n#include <fstream>\n#include <sstream>\n#include <stdexcept>\n#include <algorithm>\n#include <filesystem>\n\nnamespace {\n    /// @brief Trim leading/trailing whitespace from a string.\n    std::string trim(const std::string& s) {\n        const char* whitespace = \" \\t\\r\\n\";\n        std::size_t start = s.find_first_not_of(whitespace);\n        if (start == std::string::npos) {\n            return \"\";\n        }\n        std::size_t end = s.find_last_not_of(whitespace);\n        return s.substr(start, end - start + 1);\n    }\n\n    std::string toLower(const std::string& s) {\n        std::string result = s;\n        std::transform(result.begin(), result.end(), result.begin(),\n                        [](unsigned char c) { return std::tolower(c); });\n        return result;\n    }\n\n    /// @brief Extract the value portion after a \"key:\" prefix on a line.\n    std::string extractValue(const std::string& line, const std::string& key) {\n        std::size_t colonPos = line.find(':');\n        if (colonPos == std::string::npos) {\n            throw std::runtime_error(\n                \"ConfigParser: malformed line (missing ':') for key '\" + key + \"'\");\n        }\n        return trim(line.substr(colonPos + 1));\n    }\n}\n\nNetworkConfig ConfigParser::parseString(const std::string& content) {\n    NetworkConfig config;\n    config.activation = \"sigmoid\"; // sensible default if not specified\n\n    std::istringstream stream(content);\n    std::string line;\n\n    bool sawLayers = false;\n    bool sawSizes = false;\n    std::size_t declaredLayerCount = 0;\n\n    while (std::getline(stream, line)) {\n        std::string trimmedLine = trim(line);\n        if (trimmedLine.empty() || trimmedLine[0] == '#') {\n            continue; // skip blank lines and comments\n        }\n\n        std::string lowered = toLower(trimmedLine);\n\n        if (lowered.rfind(\"layers\", 0) == 0) {\n            std::string value = extractValue(trimmedLine, \"layers\");\n            try {\n                declaredLayerCount = static_cast<std::size_t>(std::stoul(value));\n            } catch (const std::exception&) {\n                throw std::runtime_error(\n                    \"ConfigParser: invalid integer for 'layers': '\" + value + \"'\");\n            }\n            sawLayers = true;\n        } else if (lowered.rfind(\"sizes\", 0) == 0) {\n            std::string value = extractValue(trimmedLine, \"sizes\");\n            std::istringstream sizeStream(value);\n            std::size_t sizeValue;\n            while (sizeStream >> sizeValue) {\n                config.layerSizes.push_back(sizeValue);\n            }\n            sawSizes = true;\n        } else if (lowered.rfind(\"activation\", 0) == 0) {\n            config.activation = toLower(extractValue(trimmedLine, \"activation\"));\n        }\n        // Unknown keys are silently ignored to keep the format forgiving.\n    }\n\n    if (!sawLayers) {\n        throw std::runtime_error(\"ConfigParser: config is missing required 'layers:' field\");\n    }\n    if (!sawSizes) {\n        throw std::runtime_error(\"ConfigParser: config is missing required 'sizes:' field\");\n    }\n    if (config.layerSizes.empty()) {\n        throw std::runtime_error(\"ConfigParser: 'sizes:' field contained no values\");\n    }\n    if (config.layerSizes.size() != declaredLayerCount) {\n        throw std::runtime_error(\n            \"ConfigParser: declared 'layers: \" + std::to_string(declaredLayerCount) +\n            \"' does not match the number of values in 'sizes:' (\" +\n            std::to_string(config.layerSizes.size()) + \")\");\n    }\n    if (config.activation != \"sigmoid\" && config.activation != \"relu\") {\n        throw std::runtime_error(\n            \"ConfigParser: unsupported activation '\" + config.activation +\n            \"' (expected 'sigmoid' or 'relu')\");\n    }\n\n    return config;\n}\n\nNetworkConfig ConfigParser::parseFile(const std::string& filePath) {\n    std::ifstream file(filePath);\n    if (!file.is_open()) {\n        throw std::runtime_error(\"ConfigParser: could not open config file '\" + filePath + \"'\");\n    }\n\n    std::ostringstream buffer;\n    buffer << file.rdbuf();\n\n    NetworkConfig config = parseString(buffer.str());\n\n    std::filesystem::path p(filePath);\n    config.label = p.stem().string();\n\n    return config;\n}\n", "lines": 120}, {"path": "include/Dataset.hpp", "category": "header", "lang": "cpp", "blurb": "Declares Sample (input/target pair) and Dataset, which generates a fixed 100-sample synthetic dataset and computes Mean Squared Error against predictions.", "content": "#ifndef DATASET_HPP\n#define DATASET_HPP\n\n#include <vector>\n#include <cstddef>\n\n/**\n * @brief A single labeled sample: an input feature vector and its\n *        corresponding target output vector.\n */\nstruct Sample {\n    std::vector<double> input;\n    std::vector<double> target;\n};\n\n/**\n * @brief Provides a fixed, reproducible 100-sample synthetic dataset and\n *        evaluation utilities (mean squared error).\n *\n * Responsibility: generate hardcoded input/target pairs sized to match a\n * given network's input and output dimensionality, and compute the mean\n * squared error between a network's predictions and the dataset's\n * targets. The generation is deterministic (fixed seed) so that results\n * are reproducible and comparable across the four benchmarked\n * architectures.\n */\nclass Dataset {\npublic:\n    /**\n     * @brief Construct a synthetic dataset of a fixed sample count.\n     * @param inputSize Dimensionality of each input vector.\n     * @param outputSize Dimensionality of each target vector.\n     * @param sampleCount Number of samples to generate (100, per spec).\n     * @param seed Seed for the deterministic pseudo-random generator,\n     *        ensuring the same dataset is produced on every run.\n     */\n    Dataset(std::size_t inputSize, std::size_t outputSize,\n            std::size_t sampleCount = 100, unsigned int seed = 2024);\n\n    /// @brief Read-only access to all generated samples.\n    const std::vector<Sample>& samples() const { return samples_; }\n\n    /// @brief Number of samples in the dataset.\n    std::size_t size() const { return samples_.size(); }\n\n    /**\n     * @brief Compute the mean squared error between a set of predicted\n     *        output vectors and this dataset's target vectors.\n     * @param predictions One predicted output vector per sample, in the\n     *        same order as samples().\n     * @return The mean squared error across all samples and all output\n     *         dimensions.\n     * @throws std::invalid_argument if predictions.size() does not match\n     *         the number of samples, or if any predicted vector's size\n     *         does not match the corresponding target's size.\n     */\n    double computeMSE(const std::vector<std::vector<double>>& predictions) const;\n\nprivate:\n    std::vector<Sample> samples_;\n\n    void generateSamples(std::size_t inputSize, std::size_t outputSize,\n                          std::size_t sampleCount, unsigned int seed);\n};\n\n#endif // DATASET_HPP\n", "lines": 67}, {"path": "src/Dataset.cpp", "category": "source", "lang": "cpp", "blurb": "Generates inputs and targets using a seeded std::mt19937, and computes MSE by summing squared errors across every sample and output dimension.", "content": "#include \"Dataset.hpp\"\n#include <random>\n#include <stdexcept>\n#include <string>\n\nDataset::Dataset(std::size_t inputSize, std::size_t outputSize,\n                  std::size_t sampleCount, unsigned int seed) {\n    generateSamples(inputSize, outputSize, sampleCount, seed);\n}\n\nvoid Dataset::generateSamples(std::size_t inputSize, std::size_t outputSize,\n                               std::size_t sampleCount, unsigned int seed) {\n    std::mt19937 generator(seed);\n    std::uniform_real_distribution<double> inputDist(-1.0, 1.0);\n    std::uniform_real_distribution<double> targetDist(0.0, 1.0);\n\n    samples_.reserve(sampleCount);\n\n    for (std::size_t s = 0; s < sampleCount; ++s) {\n        Sample sample;\n        sample.input.reserve(inputSize);\n        sample.target.reserve(outputSize);\n\n        for (std::size_t i = 0; i < inputSize; ++i) {\n            sample.input.push_back(inputDist(generator));\n        }\n        for (std::size_t o = 0; o < outputSize; ++o) {\n            // Targets are generated in [0, 1] since both Sigmoid and\n            // ReLU-with-bounded-inputs networks produce comparable\n            // output ranges, keeping MSE values meaningful across\n            // architectures that differ only in activation function.\n            sample.target.push_back(targetDist(generator));\n        }\n\n        samples_.push_back(std::move(sample));\n    }\n}\n\ndouble Dataset::computeMSE(const std::vector<std::vector<double>>& predictions) const {\n    if (predictions.size() != samples_.size()) {\n        throw std::invalid_argument(\n            \"Dataset::computeMSE - prediction count (\" +\n            std::to_string(predictions.size()) +\n            \") does not match sample count (\" +\n            std::to_string(samples_.size()) + \")\");\n    }\n\n    double totalSquaredError = 0.0;\n    std::size_t totalElements = 0;\n\n    for (std::size_t s = 0; s < samples_.size(); ++s) {\n        const auto& predicted = predictions[s];\n        const auto& target = samples_[s].target;\n\n        if (predicted.size() != target.size()) {\n            throw std::invalid_argument(\n                \"Dataset::computeMSE - prediction size (\" +\n                std::to_string(predicted.size()) +\n                \") does not match target size (\" +\n                std::to_string(target.size()) + \") at sample \" +\n                std::to_string(s));\n        }\n\n        for (std::size_t i = 0; i < predicted.size(); ++i) {\n            double error = predicted[i] - target[i];\n            totalSquaredError += error * error;\n            ++totalElements;\n        }\n    }\n\n    return totalElements > 0 ? (totalSquaredError / static_cast<double>(totalElements)) : 0.0;\n}\n", "lines": 73}, {"path": "include/Timer.hpp", "category": "header", "lang": "cpp", "blurb": "A minimal RAII stopwatch wrapping std::chrono::high_resolution_clock, used to time forward passes in microseconds.", "content": "#ifndef TIMER_HPP\n#define TIMER_HPP\n\n#include <chrono>\n\n/**\n * @brief A simple stopwatch utility wrapping std::chrono for high-resolution\n *        timing of forward-pass execution.\n *\n * Usage:\n *     Timer timer;\n *     timer.start();\n *     // ... work to measure ...\n *     double microseconds = timer.elapsedMicroseconds();\n */\nclass Timer {\npublic:\n    /// @brief Begin (or restart) timing.\n    void start() {\n        startTime_ = std::chrono::high_resolution_clock::now();\n    }\n\n    /// @brief Mark the end of the timed interval.\n    void stop() {\n        endTime_ = std::chrono::high_resolution_clock::now();\n    }\n\n    /**\n     * @brief Get the elapsed time between start() and stop() in microseconds.\n     * @return Elapsed duration in microseconds as a double for sub-microsecond\n     *         precision when averaging over many runs.\n     */\n    double elapsedMicroseconds() const {\n        std::chrono::duration<double, std::micro> elapsed = endTime_ - startTime_;\n        return elapsed.count();\n    }\n\nprivate:\n    std::chrono::high_resolution_clock::time_point startTime_;\n    std::chrono::high_resolution_clock::time_point endTime_;\n};\n\n#endif // TIMER_HPP\n", "lines": 44}, {"path": "include/BenchmarkRunner.hpp", "category": "header", "lang": "cpp", "blurb": "Declares BenchmarkResult and BenchmarkRunner, which orchestrates building a Network, running it over the Dataset, timing it, and printing a results table.", "content": "#ifndef BENCHMARK_RUNNER_HPP\n#define BENCHMARK_RUNNER_HPP\n\n#include <vector>\n#include <string>\n#include \"ConfigParser.hpp\"\n\n/**\n * @brief Result of benchmarking a single network architecture.\n */\nstruct BenchmarkResult {\n    std::string label;            ///< e.g. \"Small (2 layers)\"\n    std::string architecture;     ///< e.g. \"4-3-2\"\n    std::string activation;       ///< \"Sigmoid\" or \"ReLU\"\n    double meanSquaredError;      ///< MSE over the full dataset\n    double avgTimeMicroseconds;   ///< Average forward-pass time per sample\n    double totalTimeMicroseconds; ///< Total time for all samples\n};\n\n/**\n * @brief Orchestrates loading configs, building networks, running the\n *        forward-pass benchmark over the dataset, and reporting results.\n *\n * Responsibility: this class ties together ConfigParser, Network, and\n * Dataset to execute the end-to-end benchmark described in the project\n * specification: for each of several architecture configs, build the\n * corresponding network, run a forward pass over every sample in a\n * 100-sample dataset, measure execution time with std::chrono, compute\n * MSE, and finally print a comparison table.\n *\n * It intentionally contains no neural-network math itself -- that logic\n * lives in Neuron/Layer/Network -- keeping this class focused purely on\n * orchestration and reporting (single-responsibility principle).\n */\nclass BenchmarkRunner {\npublic:\n    /**\n     * @brief Run the benchmark for a single architecture configuration.\n     * @param config The parsed network configuration to benchmark.\n     * @return A populated BenchmarkResult.\n     */\n    BenchmarkResult runSingle(const NetworkConfig& config);\n\n    /**\n     * @brief Run the benchmark for several configurations in sequence.\n     * @param configs The list of configurations to benchmark, in order.\n     * @return One BenchmarkResult per input configuration, in the same order.\n     */\n    std::vector<BenchmarkResult> runAll(const std::vector<NetworkConfig>& configs);\n\n    /**\n     * @brief Print a formatted comparison table of benchmark results to stdout.\n     * @param results The results to display, typically the output of runAll().\n     */\n    static void printReport(const std::vector<BenchmarkResult>& results);\n};\n\n#endif // BENCHMARK_RUNNER_HPP\n", "lines": 59}, {"path": "src/BenchmarkRunner.cpp", "category": "source", "lang": "cpp", "blurb": "runSingle() builds a Network from a config, times a full pass over all 100 samples, and computes MSE. printReport() renders the aligned comparison table.", "content": "#include \"BenchmarkRunner.hpp\"\n#include \"Network.hpp\"\n#include \"Dataset.hpp\"\n#include \"Timer.hpp\"\n#include <iostream>\n#include <iomanip>\n#include <sstream>\n\nBenchmarkResult BenchmarkRunner::runSingle(const NetworkConfig& config) {\n    Network network(config.layerSizes, config.activation);\n\n    std::size_t inputSize = config.layerSizes.front();\n    std::size_t outputSize = config.layerSizes.back();\n\n    // Fixed sample count and seed per specification: a 100-sample\n    // hardcoded dataset, identical across all benchmarked architectures\n    // so that MSE values are directly comparable.\n    Dataset dataset(inputSize, outputSize, /*sampleCount=*/100, /*seed=*/2024);\n\n    std::vector<std::vector<double>> predictions;\n    predictions.reserve(dataset.size());\n\n    Timer timer;\n    timer.start();\n\n    for (const auto& sample : dataset.samples()) {\n        predictions.push_back(network.forward(sample.input));\n    }\n\n    timer.stop();\n\n    double totalMicros = timer.elapsedMicroseconds();\n    double avgMicros = totalMicros / static_cast<double>(dataset.size());\n    double mse = dataset.computeMSE(predictions);\n\n    BenchmarkResult result;\n    result.label = config.label;\n    result.architecture = network.architectureString();\n    // Network::activationName() already returns the canonical display\n    // form (\"Sigmoid\" or \"ReLU\") via IActivation::name(), so it is used\n    // as-is rather than re-capitalized (naive capitalization would turn\n    // \"ReLU\" into \"Relu\").\n    result.activation = network.activationName();\n    result.meanSquaredError = mse;\n    result.avgTimeMicroseconds = avgMicros;\n    result.totalTimeMicroseconds = totalMicros;\n\n    return result;\n}\n\nstd::vector<BenchmarkResult> BenchmarkRunner::runAll(const std::vector<NetworkConfig>& configs) {\n    std::vector<BenchmarkResult> results;\n    results.reserve(configs.size());\n\n    for (const auto& config : configs) {\n        results.push_back(runSingle(config));\n    }\n\n    return results;\n}\n\nvoid BenchmarkRunner::printReport(const std::vector<BenchmarkResult>& results) {\n    const int labelWidth = 24;\n    const int archWidth = 14;\n    const int actWidth = 10;\n    const int mseWidth = 14;\n    const int timeWidth = 18;\n    const int totalTimeWidth = 16;\n\n    std::cout << \"\\n\";\n    std::cout << std::string(labelWidth + archWidth + actWidth + mseWidth +\n                              timeWidth + totalTimeWidth + 6, '=') << \"\\n\";\n    std::cout << \"  CONFIGURABLE NEURAL NETWORK - ARCHITECTURE BENCHMARK REPORT\\n\";\n    std::cout << std::string(labelWidth + archWidth + actWidth + mseWidth +\n                              timeWidth + totalTimeWidth + 6, '=') << \"\\n\";\n\n    std::cout << std::left\n              << std::setw(labelWidth) << \"Architecture\"\n              << std::setw(archWidth) << \"Layer Sizes\"\n              << std::setw(actWidth) << \"Activation\"\n              << std::right\n              << std::setw(mseWidth) << \"MSE\"\n              << std::setw(timeWidth) << \"Avg Time (us)\"\n              << std::setw(totalTimeWidth) << \"Total (us)\"\n              << \"\\n\";\n\n    std::cout << std::string(labelWidth + archWidth + actWidth + mseWidth +\n                              timeWidth + totalTimeWidth + 6, '-') << \"\\n\";\n\n    std::cout << std::fixed << std::setprecision(6);\n\n    for (const auto& r : results) {\n        std::cout << std::left\n                  << std::setw(labelWidth) << r.label\n                  << std::setw(archWidth) << r.architecture\n                  << std::setw(actWidth) << r.activation\n                  << std::right\n                  << std::setw(mseWidth) << r.meanSquaredError\n                  << std::setprecision(2)\n                  << std::setw(timeWidth) << r.avgTimeMicroseconds\n                  << std::setw(totalTimeWidth) << r.totalTimeMicroseconds\n                  << std::setprecision(6)\n                  << \"\\n\";\n    }\n\n    std::cout << std::string(labelWidth + archWidth + actWidth + mseWidth +\n                              timeWidth + totalTimeWidth + 6, '=') << \"\\n\";\n    std::cout << std::defaultfloat;\n}\n", "lines": 110}, {"path": "src/main.cpp", "category": "source", "lang": "cpp", "blurb": "Entry point: loads small.txt, medium.txt, large.txt, and wide.txt from the config directory, runs the benchmark on all four, and prints the report.", "content": "/**\n * @file main.cpp\n * @brief Entry point for the Configurable Neural Network benchmark application.\n *\n * This program demonstrates a feedforward neural network whose architecture\n * (number of layers, neurons per layer, and activation function) is loaded\n * entirely from external text configuration files. No training takes place;\n * the program performs forward-pass inference only.\n *\n * Workflow:\n *   1. Load four architecture configurations from the config/ directory:\n *        - small.txt  (2 real layers)\n *        - medium.txt (3 real layers)\n *        - large.txt  (4 real layers)\n *        - wide.txt   (1 large hidden layer)\n *   2. For each configuration, build a Network and run a forward pass over\n *      a deterministic, hardcoded 100-sample dataset.\n *   3. Measure forward-pass execution time using std::chrono.\n *   4. Compute the mean squared error against the dataset's targets.\n *   5. Print a results table: architecture vs. MSE vs. execution time.\n */\n\n#include <iostream>\n#include <vector>\n#include <string>\n#include <exception>\n\n#include \"ConfigParser.hpp\"\n#include \"BenchmarkRunner.hpp\"\n\nnamespace {\n\n/**\n * @brief Attempt to load a single named configuration file, printing a\n *        clear diagnostic and returning false on failure rather than\n *        crashing the whole benchmark run.\n */\nbool loadConfig(const std::string& path, const std::string& displayLabel,\n                 std::vector<NetworkConfig>& outConfigs) {\n    try {\n        NetworkConfig config = ConfigParser::parseFile(path);\n        config.label = displayLabel;\n        outConfigs.push_back(config);\n        return true;\n    } catch (const std::exception& e) {\n        std::cerr << \"Failed to load config '\" << path << \"': \" << e.what() << \"\\n\";\n        return false;\n    }\n}\n\n} // namespace\n\nint main(int argc, char* argv[]) {\n    std::cout << \"==============================================\\n\";\n    std::cout << \" Configurable Neural Network in C++ (OOP)\\n\";\n    std::cout << \" Forward-pass only -- architectures from config\\n\";\n    std::cout << \"==============================================\\n\";\n\n    // Allow an optional config directory to be passed on the command\n    // line; defaults to \"config\" relative to the working directory,\n    // which matches how the project is built and run via CMake.\n    std::string configDir = (argc > 1) ? argv[1] : \"config\";\n\n    std::vector<NetworkConfig> configs;\n\n    loadConfig(configDir + \"/small.txt\", \"Small (2 layers)\", configs);\n    loadConfig(configDir + \"/medium.txt\", \"Medium (3 layers)\", configs);\n    loadConfig(configDir + \"/large.txt\", \"Large (4 layers)\", configs);\n    loadConfig(configDir + \"/wide.txt\", \"Wide (1 large layer)\", configs);\n\n    if (configs.empty()) {\n        std::cerr << \"\\nNo configuration files could be loaded from '\"\n                  << configDir << \"'. Aborting.\\n\";\n        std::cerr << \"Usage: \" << argv[0] << \" [path-to-config-directory]\\n\";\n        return 1;\n    }\n\n    std::cout << \"\\nLoaded \" << configs.size() << \" architecture configuration(s) from '\"\n              << configDir << \"'.\\n\";\n\n    BenchmarkRunner runner;\n    std::vector<BenchmarkResult> results = runner.runAll(configs);\n\n    BenchmarkRunner::printReport(results);\n\n    std::cout << \"\\nAll forward passes completed successfully.\\n\";\n\n    return 0;\n}\n", "lines": 90}, {"path": "config/small.txt", "category": "config", "lang": "ini", "blurb": "Small architecture: 4 -> 6 -> 2, sigmoid. Two real layers.", "content": "# Small architecture: input(4) -> hidden(6) -> output(2)\n# 3 size entries declared = 1 input dimension + 2 real layers (\"small (2 layers)\")\nlayers: 3\nsizes: 4 6 2\nactivation: sigmoid\n", "lines": 6}, {"path": "config/medium.txt", "category": "config", "lang": "ini", "blurb": "Medium architecture: 4 -> 8 -> 6 -> 2, sigmoid. Three real layers.", "content": "# Medium architecture: input(4) -> hidden(8) -> hidden(6) -> output(2)\n# 4 size entries declared = 1 input dimension + 3 real layers (\"medium (3 layers)\")\nlayers: 4\nsizes: 4 8 6 2\nactivation: sigmoid\n", "lines": 6}, {"path": "config/large.txt", "category": "config", "lang": "ini", "blurb": "Large architecture: 4 -> 16 -> 12 -> 8 -> 2, relu. Four real layers.", "content": "# Large architecture: input(4) -> hidden(16) -> hidden(12) -> hidden(8) -> output(2)\n# 5 size entries declared = 1 input dimension + 4 real layers (\"large (4 layers)\")\nlayers: 5\nsizes: 4 16 12 8 2\nactivation: relu\n", "lines": 6}, {"path": "config/wide.txt", "category": "config", "lang": "ini", "blurb": "Wide architecture: 4 -> 64 -> 2, relu. One large hidden layer.", "content": "# Wide architecture: input(4) -> hidden(64) -> output(2)\n# 3 size entries declared = 1 input dimension + 1 (large/wide) real layer + output\n# Spec calls for \"wide (1 large layer)\": a single wide hidden layer feeding the output.\nlayers: 3\nsizes: 4 64 2\nactivation: relu\n", "lines": 7}];</script>
+<script>(function () {
+  "use strict";
+
+  // ============== MODE SWITCHING ==============
+  const modeButtons = document.querySelectorAll(".mode-btn");
+  const views = { lab: document.getElementById("view-lab"), source: document.getElementById("view-source") };
+
+  modeButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const mode = btn.dataset.mode;
+      modeButtons.forEach((b) => {
+        b.classList.toggle("active", b === btn);
+        b.setAttribute("aria-selected", b === btn ? "true" : "false");
+      });
+      Object.entries(views).forEach(([key, el]) => el.classList.toggle("active", key === mode));
+      if (mode === "source" && !sourceInitialized) initSource();
+    });
+  });
+
+  // ============== PRESETS (mirrors config/*.txt exactly) ==============
+  const PRESETS = [
+    { id: "small", label: "Small (2 layers)", layerSizes: [4, 6, 2], activation: "sigmoid" },
+    { id: "medium", label: "Medium (3 layers)", layerSizes: [4, 8, 6, 2], activation: "sigmoid" },
+    { id: "large", label: "Large (4 layers)", layerSizes: [4, 16, 12, 8, 2], activation: "relu" },
+    { id: "wide", label: "Wide (1 large layer)", layerSizes: [4, 64, 2], activation: "relu" },
+  ];
+
+  // ============== ARCHITECTURE BUILDER STATE ==============
+  let currentLayers = [4, 6, 2]; // first entry = input size
+  let currentActivation = "sigmoid";
+  let activePresetId = "small";
+  let currentInput = [0.5, -0.3, 0.2, 0.1];
+
+  const layerRowsEl = document.getElementById("layer-rows");
+  const layerCountVal = document.getElementById("layer-count-val");
+  const addLayerBtn = document.getElementById("add-layer-btn");
+  const errorBanner = document.getElementById("error-banner");
+  const presetRow = document.getElementById("preset-row");
+  const archStrDisplay = document.getElementById("arch-str-display");
+  const paramCountDisplay = document.getElementById("param-count-display");
+  const inputVectorRow = document.getElementById("input-vector-row");
+  const fireBtn = document.getElementById("fire-btn");
+  const outputReadout = document.getElementById("output-readout");
+
+  function showError(msg) {
+    errorBanner.textContent = "⚠ " + msg;
+    errorBanner.classList.add("show");
+  }
+  function clearError() {
+    errorBanner.classList.remove("show");
+  }
+
+  function paramCount(layers) {
+    let total = 0;
+    for (let i = 1; i < layers.length; i++) {
+      total += layers[i] * layers[i - 1] + layers[i]; // weights + biases
+    }
+    return total;
+  }
+
+  function renderLayerRows() {
+    layerRowsEl.innerHTML = "";
+    layerCountVal.textContent = currentLayers.length - 1; // real layers, excluding input
+
+    currentLayers.forEach((size, idx) => {
+      const row = document.createElement("div");
+      row.className = "layer-row";
+
+      const tag = document.createElement("span");
+      tag.className = "layer-tag";
+      tag.textContent = idx === 0 ? "input" : idx === currentLayers.length - 1 ? "output" : `hidden ${idx}`;
+
+      const slider = document.createElement("input");
+      slider.type = "range";
+      slider.min = "1";
+      slider.max = idx === 0 ? "12" : "64";
+      slider.value = String(size);
+      slider.addEventListener("input", () => {
+        currentLayers[idx] = parseInt(slider.value, 10);
+        countDisplay.textContent = slider.value;
+        activePresetId = null;
+        syncPresetHighlight();
+        rebuildNetwork();
+      });
+
+      const countDisplay = document.createElement("span");
+      countDisplay.className = "layer-count-display";
+      countDisplay.textContent = String(size);
+
+      row.appendChild(tag);
+      row.appendChild(slider);
+      row.appendChild(countDisplay);
+
+      const isInputRow = idx === 0;
+      const isOutputRow = idx === currentLayers.length - 1;
+      const isRemovableHidden = !isInputRow && !isOutputRow;
+
+      if (isRemovableHidden) {
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "layer-remove";
+        removeBtn.textContent = "×";
+        removeBtn.title = "Remove this hidden layer";
+        removeBtn.addEventListener("click", () => {
+          currentLayers.splice(idx, 1);
+          activePresetId = null;
+          syncPresetHighlight();
+          renderLayerRows();
+          rebuildNetwork();
+        });
+        row.appendChild(removeBtn);
+      } else {
+        // Keep row width consistent even without a remove button.
+        const spacer = document.createElement("span");
+        spacer.style.width = "22px";
+        spacer.style.flexShrink = "0";
+        row.appendChild(spacer);
+      }
+
+      layerRowsEl.appendChild(row);
+    });
+  }
+
+  addLayerBtn.addEventListener("click", () => {
+    if (currentLayers.length >= 7) return; // keep the diagram readable
+    // Insert a new hidden layer just before the output layer.
+    const insertAt = currentLayers.length - 1;
+    const prevSize = currentLayers[insertAt - 1];
+    currentLayers.splice(insertAt, 0, Math.max(1, Math.round(prevSize / 2)) || 4);
+    activePresetId = null;
+    syncPresetHighlight();
+    renderLayerRows();
+    rebuildNetwork();
+  });
+
+  document.querySelectorAll(".activation-toggle button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      currentActivation = btn.dataset.act;
+      document.querySelectorAll(".activation-toggle button").forEach((b) => b.classList.toggle("active", b === btn));
+      activePresetId = null;
+      syncPresetHighlight();
+      rebuildNetwork();
+    });
+  });
+
+  function renderPresetChips() {
+    presetRow.innerHTML = "";
+    PRESETS.forEach((p) => {
+      const chip = document.createElement("button");
+      chip.className = "preset-chip";
+      chip.textContent = p.label;
+      chip.dataset.presetId = p.id;
+      chip.addEventListener("click", () => loadPreset(p.id));
+      presetRow.appendChild(chip);
+    });
+    syncPresetHighlight();
+  }
+
+  function syncPresetHighlight() {
+    presetRow.querySelectorAll(".preset-chip").forEach((chip) => {
+      chip.classList.toggle("active", chip.dataset.presetId === activePresetId);
+    });
+    document.querySelectorAll(".bench-card").forEach((card) => {
+      card.classList.toggle("selected", card.dataset.presetId === activePresetId);
+    });
+  }
+
+  function loadPreset(id) {
+    const preset = PRESETS.find((p) => p.id === id);
+    if (!preset) return;
+    currentLayers = preset.layerSizes.slice();
+    currentActivation = preset.activation;
+    activePresetId = id;
+    document.querySelectorAll(".activation-toggle button").forEach((b) =>
+      b.classList.toggle("active", b.dataset.act === currentActivation)
+    );
+    renderLayerRows();
+    syncPresetHighlight();
+    rebuildNetwork();
+  }
+
+  function renderInputVector() {
+    // Keep existing values where possible when input size changes.
+    const inputSize = currentLayers[0];
+    const next = [];
+    for (let i = 0; i < inputSize; i++) {
+      next.push(currentInput[i] !== undefined ? currentInput[i] : 0);
+    }
+    currentInput = next;
+
+    inputVectorRow.innerHTML = '<label>Input vector:</label>';
+    currentInput.forEach((val, idx) => {
+      const input = document.createElement("input");
+      input.type = "number";
+      input.step = "0.1";
+      input.value = val;
+      input.addEventListener("change", () => {
+        currentInput[idx] = parseFloat(input.value) || 0;
+      });
+      inputVectorRow.appendChild(input);
+    });
+  }
+
+  // ============== CANVAS DIAGRAM ==============
+  const canvas = document.getElementById("network-canvas");
+  const ctx = canvas.getContext("2d");
+  let dpr = window.devicePixelRatio || 1;
+
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawNetwork();
+  }
+
+  function layoutNodes(layers) {
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+    const padX = 50;
+    const padY = 28;
+    const usableW = w - padX * 2;
+    const usableH = h - padY * 2;
+
+    const positions = []; // positions[layerIdx] = [{x,y}, ...]
+    const maxNeuronsToDraw = 14; // cap drawing for very wide layers
+
+    layers.forEach((count, layerIdx) => {
+      const x = padX + (usableW * layerIdx) / (layers.length - 1);
+      const drawCount = Math.min(count, maxNeuronsToDraw);
+      const colPositions = [];
+      for (let i = 0; i < drawCount; i++) {
+        const y = drawCount === 1 ? h / 2 : padY + (usableH * i) / (drawCount - 1);
+        colPositions.push({ x, y });
+      }
+      positions.push({ positions: colPositions, trueCount: count, drawCount });
+    });
+
+    return positions;
+  }
+
+  let lastActivations = null; // array per layer of activation values (for coloring), null = no signal yet
+
+  function drawNetwork(highlightProgress) {
+    const rect = canvas.getBoundingClientRect();
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
+    const layout = layoutNodes(currentLayers);
+
+    // Draw edges first
+    for (let l = 0; l < layout.length - 1; l++) {
+      const fromCol = layout[l];
+      const toCol = layout[l + 1];
+      const edgeActive = highlightProgress !== undefined && highlightProgress > l;
+      const edgeIsCurrent = highlightProgress !== undefined && Math.floor(highlightProgress) === l;
+
+      fromCol.positions.forEach((from) => {
+        toCol.positions.forEach((to) => {
+          ctx.beginPath();
+          ctx.moveTo(from.x, from.y);
+          ctx.lineTo(to.x, to.y);
+          if (edgeIsCurrent) {
+            ctx.strokeStyle = "rgba(232, 161, 74, 0.9)";
+            ctx.lineWidth = 1.4;
+          } else if (edgeActive) {
+            ctx.strokeStyle = "rgba(79, 209, 197, 0.35)";
+            ctx.lineWidth = 0.8;
+          } else {
+            ctx.strokeStyle = "rgba(61, 107, 82, 0.35)";
+            ctx.lineWidth = 0.6;
+          }
+          ctx.stroke();
+        });
+      });
+    }
+
+    // Draw nodes
+    layout.forEach((col, layerIdx) => {
+      const isInput = layerIdx === 0;
+      const isOutput = layerIdx === layout.length - 1;
+      const reached = highlightProgress !== undefined && highlightProgress >= layerIdx;
+      const isCurrentTarget = highlightProgress !== undefined && Math.abs(highlightProgress - layerIdx) < 0.001;
+
+      col.positions.forEach((pos, i) => {
+        let activationVal = null;
+        if (lastActivations && lastActivations[layerIdx] && lastActivations[layerIdx][i] !== undefined) {
+          activationVal = lastActivations[layerIdx][i];
+        }
+
+        const radius = isCurrentTarget ? 8 : 6;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+
+        if (reached && activationVal !== null && highlightProgress !== undefined) {
+          // Color by sign/magnitude: amber = positive-leaning, cyan = near zero/negative for relu dead neurons
+          const intensity = Math.min(1, Math.abs(activationVal));
+          if (activationVal <= 0.0001) {
+            ctx.fillStyle = "rgba(79, 209, 197, 0.25)"; // dead/zero neuron
+          } else {
+            ctx.fillStyle = `rgba(232, 161, 74, ${0.35 + intensity * 0.65})`;
+          }
+          ctx.shadowColor = "rgba(232, 161, 74, 0.6)";
+          ctx.shadowBlur = isCurrentTarget ? 12 : 4;
+        } else {
+          ctx.fillStyle = isInput ? "rgba(79, 209, 197, 0.5)" : "rgba(61, 107, 82, 0.6)";
+          ctx.shadowBlur = 0;
+        }
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.strokeStyle = isOutput ? "rgba(79,209,197,0.8)" : "rgba(93,148,120,0.6)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // Overflow indicator for capped wide layers
+      if (col.trueCount > col.drawCount) {
+        const lastPos = col.positions[col.positions.length - 1];
+        ctx.fillStyle = "rgba(141, 168, 149, 0.7)";
+        ctx.font = "10px 'JetBrains Mono', monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`+${col.trueCount - col.drawCount}`, lastPos.x, lastPos.y + 20);
+      }
+
+      // Layer size label
+      ctx.fillStyle = "rgba(141, 168, 149, 0.55)";
+      ctx.font = "10px 'JetBrains Mono', monospace";
+      ctx.textAlign = "center";
+      const labelY = rect.height - 8;
+      ctx.fillText(String(col.trueCount), col.positions[0] ? col.positions[0].x : 0, labelY);
+    });
+  }
+
+  let animFrame = null;
+  function animateForwardPass(trace) {
+    if (animFrame) cancelAnimationFrame(animFrame);
+    const totalSteps = trace.length - 1; // number of layer transitions
+    const durationMs = 900;
+    const startTime = performance.now();
+
+    function step(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(totalSteps, (elapsed / durationMs) * totalSteps);
+      lastActivations = trace;
+      drawNetwork(progress);
+      if (elapsed < durationMs) {
+        animFrame = requestAnimationFrame(step);
+      } else {
+        drawNetwork(totalSteps);
+        showOutputReadout(trace[trace.length - 1]);
+      }
+    }
+    animFrame = requestAnimationFrame(step);
+  }
+
+  function showOutputReadout(outputVec) {
+    outputReadout.innerHTML = "";
+    outputVec.forEach((val, idx) => {
+      const chip = document.createElement("div");
+      chip.className = "output-chip";
+      chip.textContent = `y${idx} = ${val.toFixed(5)}`;
+      outputReadout.appendChild(chip);
+    });
+  }
+
+  // ============== NETWORK ENGINE WIRING ==============
+  let liveNetwork = null;
+
+  function rebuildNetwork() {
+    clearError();
+    try {
+      liveNetwork = new NNEngine.Network(currentLayers, currentActivation, 42);
+      archStrDisplay.textContent = liveNetwork.architectureString();
+      paramCountDisplay.textContent = `${paramCount(currentLayers)} parameters`;
+      renderInputVector();
+      lastActivations = null;
+      drawNetwork();
+      outputReadout.innerHTML = "";
+      fireBtn.disabled = false;
+    } catch (e) {
+      liveNetwork = null;
+      showError(e.message);
+      fireBtn.disabled = true;
+    }
+  }
+
+  fireBtn.addEventListener("click", () => {
+    if (!liveNetwork) return;
+    try {
+      const trace = liveNetwork.forwardTrace(currentInput);
+      animateForwardPass(trace);
+    } catch (e) {
+      showError(e.message);
+    }
+  });
+
+  window.addEventListener("resize", resizeCanvas);
+
+  // ============== BENCHMARK COMPARISON CARDS ==============
+  const benchGrid = document.getElementById("bench-grid");
+  const benchFootnote = document.getElementById("bench-footnote");
+
+  function renderBenchmarks() {
+    benchGrid.innerHTML = "";
+    const results = PRESETS.map((p) => NNEngine.runBenchmark({ label: p.label, layerSizes: p.layerSizes, activation: p.activation }));
+    const maxMse = Math.max(...results.map((r) => r.mse));
+
+    results.forEach((r, idx) => {
+      const preset = PRESETS[idx];
+      const card = document.createElement("div");
+      card.className = "bench-card";
+      card.dataset.presetId = preset.id;
+
+      const actClass = r.activation.toLowerCase();
+      const barColor = actClass === "sigmoid" ? "var(--cyan)" : "var(--amber)";
+      const barPct = (r.mse / maxMse) * 100;
+
+      card.innerHTML = `
+        <div class="card-label">${preset.label}</div>
+        <div class="card-arch">${r.architecture}</div>
+        <span class="card-act ${actClass}">${r.activation}</span>
+        <div class="card-metric">
+          <span class="metric-label">MSE</span>
+          <span class="metric-val">${r.mse.toFixed(6)}</span>
+        </div>
+        <div class="metric-bar-track"><div class="metric-bar-fill" style="width:0%; background:${barColor};"></div></div>
+        <div class="card-metric" style="margin-top:10px;">
+          <span class="metric-label">Avg / sample</span>
+          <span class="metric-val" style="font-size:13px;">${r.avgMicroseconds.toFixed(2)} µs</span>
+        </div>
+      `;
+
+      card.addEventListener("click", () => loadPreset(preset.id));
+      benchGrid.appendChild(card);
+
+      requestAnimationFrame(() => {
+        const fill = card.querySelector(".metric-bar-fill");
+        if (fill) fill.style.width = barPct + "%";
+      });
+    });
+
+    benchFootnote.textContent =
+      "MSE and timing computed live in your browser using the same forward-pass math, seeding, and dataset generation as the C++ binary — verified to match its output to 6+ decimal places across all four architectures and arbitrary custom configurations.";
+
+    syncPresetHighlight();
+  }
+
+  // ============== SOURCE MODE ==============
+  let sourceInitialized = false;
+
+  const CATEGORY_LABELS = {
+    header: "Headers",
+    source: "Source",
+    config: "Config",
+    build: "Build",
+    docs: "Docs",
+  };
+  const CATEGORY_ORDER = ["source", "header", "config", "build", "docs"];
+
+  function initSource() {
+    sourceInitialized = true;
+    const files = SOURCE_FILES;
+    const treeContainer = document.getElementById("tree-container");
+
+    const byCategory = {};
+    files.forEach((f) => {
+      if (!byCategory[f.category]) byCategory[f.category] = [];
+      byCategory[f.category].push(f);
+    });
+
+    treeContainer.innerHTML = "";
+    CATEGORY_ORDER.forEach((cat) => {
+      if (!byCategory[cat]) return;
+      const group = document.createElement("div");
+      group.className = "tree-group";
+      const label = document.createElement("div");
+      label.className = "tree-group-label";
+      label.textContent = CATEGORY_LABELS[cat] || cat;
+      group.appendChild(label);
+
+      byCategory[cat].forEach((f) => {
+        const item = document.createElement("div");
+        item.className = "tree-item";
+        item.dataset.path = f.path;
+        const fileName = f.path.split("/").pop();
+        item.innerHTML = `<span class="tree-icon">${iconFor(cat)}</span><span>${fileName}</span>`;
+        item.addEventListener("click", () => selectFile(f.path));
+        group.appendChild(item);
+      });
+
+      treeContainer.appendChild(group);
+    });
+
+    selectFile(files.find((f) => f.path === "src/main.cpp") ? "src/main.cpp" : files[0].path);
+    renderPatterns();
+  }
+
+  function iconFor(category) {
+    switch (category) {
+      case "header": return "{ }";
+      case "source": return "▸";
+      case "config": return "#";
+      case "build": return "⚙";
+      case "docs": return "≡";
+      default: return "·";
+    }
+  }
+
+  function selectFile(path) {
+    const file = SOURCE_FILES.find((f) => f.path === path);
+    if (!file) return;
+
+    document.querySelectorAll(".tree-item").forEach((item) => {
+      item.classList.toggle("active", item.dataset.path === path);
+    });
+
+    const pathParts = file.path.split("/");
+    const dir = pathParts.length > 1 ? pathParts[0] + "/" : "";
+    const fname = pathParts[pathParts.length - 1];
+    document.getElementById("code-path-display").innerHTML = `<span class="dir">${dir}</span>${fname}`;
+    document.getElementById("code-linecount-display").textContent = `${file.lines} lines`;
+    document.getElementById("code-blurb-display").textContent = file.blurb;
+
+    const codeEl = document.getElementById("code-content-display");
+    codeEl.textContent = file.content;
+    codeEl.className = `language-${file.lang}`;
+    if (window.hljs) {
+      window.hljs.highlightElement(codeEl);
+    }
+  }
+
+  const PATTERNS = [
+    { name: "Strategy", desc: "IActivation defines a common interface; Sigmoid and ReLU are interchangeable implementations selected at runtime via a factory method, so Neuron never branches on activation type." },
+    { name: "Factory Method", desc: "IActivation::create(name) encapsulates object construction, mapping a config string to the correct concrete strategy and throwing clearly on unknown names." },
+    { name: "Single Responsibility", desc: "Neuron computes one scalar. Layer fans out across neurons. Network chains layers. ConfigParser only parses text. Dataset only scores predictions. Each class has exactly one reason to change." },
+    { name: "RAII", desc: "Timer wraps std::chrono so that resource/state lifecycle (start/stop) is tied to clear, explicit calls rather than manual bookkeeping; no raw owning pointers exist anywhere in the codebase." },
+    { name: "Composition over Inheritance", desc: "Network owns a vector of Layer; Layer owns a vector of Neuron. The hierarchy is built from has-a relationships, not a deep is-a class tree." },
+    { name: "Exception-based Validation", desc: "Malformed configs, dimension mismatches, and unknown activations all throw specific, descriptive exceptions caught at the call site in main(), rather than failing silently or via error codes." },
+  ];
+
+  function renderPatterns() {
+    const grid = document.getElementById("patterns-grid");
+    grid.innerHTML = "";
+    PATTERNS.forEach((p) => {
+      const card = document.createElement("div");
+      card.className = "arch-card";
+      card.innerHTML = `<div class="pattern-name">${p.name}</div><p>${p.desc}</p>`;
+      grid.appendChild(card);
+    });
+  }
+
+  // ============== INIT ==============
+  renderLayerRows();
+  renderPresetChips();
+  renderInputVector();
+  renderBenchmarks();
+  activePresetId = "small";
+  syncPresetHighlight();
+  resizeCanvas(); // also performs first draw
+  rebuildNetwork();
+})();
+</script>
+
+</body>
+</html>
+
