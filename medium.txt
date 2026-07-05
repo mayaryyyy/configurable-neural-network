@@ -1,0 +1,5 @@
+# Medium architecture: input(4) -> hidden(8) -> hidden(6) -> output(2)
+# 4 size entries declared = 1 input dimension + 3 real layers ("medium (3 layers)")
+layers: 4
+sizes: 4 8 6 2
+activation: sigmoid

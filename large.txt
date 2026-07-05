@@ -1,0 +1,5 @@
+# Large architecture: input(4) -> hidden(16) -> hidden(12) -> hidden(8) -> output(2)
+# 5 size entries declared = 1 input dimension + 4 real layers ("large (4 layers)")
+layers: 5
+sizes: 4 16 12 8 2
+activation: relu
